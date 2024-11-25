@@ -10,7 +10,7 @@ git clone https://github.com/KKudas/3101_Final-Project.git
  4. Place the file in `chat-app/src/`
  5. In your terminal, CD into root folder
  ```
-git clone https://github.com/KKudas/3101_Final-Project.git 
+cd 3101_Final-Project
 ```
 6. Install node dependency
 ```
