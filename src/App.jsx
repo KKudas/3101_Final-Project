@@ -14,11 +14,11 @@ import {
 } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { useCollection } from "react-firebase-hooks/firestore";
 
 import { firebaseConfig } from "./firebase.js";
 
 import "./App.css";
+import { FcGoogle } from "react-icons/fc";
 
 const app = initializeApp(firebaseConfig);
 const firestore = getFirestore(app);
@@ -29,13 +29,52 @@ function App() {
 
   return (
     <>
-      <div className="App">
-        <header>
-          <h1>⚛️🔥💬</h1>
-          <SignOut />
-        </header>
+      <div className="App bg-gray-100 ">
+        <div className="navbar bg-slate-700 drop-shadow-md text-white fixed w-full z-10">
+          <div className="flex-1">
+            <button
+              className="btn btn-ghost text-xl"
+              onClick={() => document.getElementById("my_modal_2").showModal()}
+            >
+              💬Chatroom
+            </button>
+          </div>
+          <div className="navbar-end">
+            <SignOut />
+          </div>
+        </div>
 
-        <section>{user ? <ChatRoom /> : <SignIn />}</section>
+        {/* MODAL STUFF */}
+        <dialog id="my_modal_2" className="modal">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">💬Chatroom</h3>
+            <p className="py-4">
+              A Final Project for 3101 Platform Technologies
+            </p>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
+
+        <section>
+          {user ? (
+            <ChatRoom />
+          ) : (
+            <div className="hero bg-base-200 min-h-screen">
+              <div className="hero-content text-center">
+                <div className="max-w-md">
+                  <h1 className="text-5xl font-bold">Hello there 👋🏻</h1>
+                  <p className="py-6">
+                    Welcome to Chatroom! Sign in to start, meet new people, and
+                    make connections in one shared room
+                  </p>
+                  <SignIn />
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </>
   );
@@ -51,12 +90,27 @@ function SignIn() {
     }
   };
 
-  return <button onClick={signInWithGoogle}>Sign in with Google</button>;
+  return (
+    <button
+      className="btn btn-outline btn-primary text-base"
+      onClick={signInWithGoogle}
+    >
+      <FcGoogle size={20} />
+      Sign in with Google
+    </button>
+  );
 }
 
 function SignOut() {
   return (
-    auth.currentUser && <button onClick={() => auth.signOut()}>Sign Out</button>
+    auth.currentUser && (
+      <button
+        className="btn btn-outline btn-error"
+        onClick={() => auth.signOut()}
+      >
+        Sign Out
+      </button>
+    )
   );
 }
 
@@ -69,7 +123,6 @@ function ChatRoom() {
   const [loading, setLoading] = useState(true);
   const [formValue, setFormValue] = useState("");
 
-  // Fetch the initial 25 messages
   useEffect(() => {
     const firstQuery = query(
       messageRef,
@@ -78,11 +131,14 @@ function ChatRoom() {
     );
 
     const unsubscribe = onSnapshot(firstQuery, (snapshot) => {
-      setMessagesSnapshot(snapshot.docs.reverse());
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
-      setLoading(false);
+      if (!snapshot.empty) {
+        setMessagesSnapshot(snapshot.docs.reverse());
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+        setLoading(false);
+      } else {
+        console.log("No messages found.");
+      }
 
-      // Scroll to the bottom after messages are loaded
       setTimeout(() => {
         if (dummy.current) {
           dummy.current.scrollIntoView({ behavior: "smooth" });
@@ -100,17 +156,21 @@ function ChatRoom() {
       messageRef,
       orderBy("createdAt", "desc"),
       startAfter(lastVisible),
-      limit(10)
+      limit(15)
     );
 
     setLoading(true);
 
     onSnapshot(nextQuery, (snapshot) => {
-      setMessagesSnapshot((prevMessages) => [
-        ...snapshot.docs.reverse(),
-        ...prevMessages,
-      ]);
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      if (!snapshot.empty) {
+        setMessagesSnapshot((prevMessages) => [
+          ...snapshot.docs.reverse(),
+          ...prevMessages,
+        ]);
+        setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      } else {
+        console.log("No more messages.");
+      }
       setLoading(false);
     });
   };
@@ -130,7 +190,6 @@ function ChatRoom() {
 
       setFormValue("");
 
-      // Scroll to the bottom after sending a message
       setTimeout(() => {
         if (dummy.current) {
           dummy.current.scrollIntoView({ behavior: "smooth" });
@@ -143,52 +202,68 @@ function ChatRoom() {
 
   return (
     <>
-      <main
+      <div
+        className="pt-16 pb-20 overflow-y-auto h-screen lg:pl-60 lg:pr-60 md:pl-28 md:pr-28"
         onScroll={(e) => {
           if (e.target.scrollTop === 0) {
             loadMoreMessages();
           }
         }}
       >
-        {messagesSnapshot &&
-          messagesSnapshot.map((doc) => (
-            <ChatMessage key={doc.id} message={doc.data()} />
-          ))}
-        <div ref={dummy}></div>
-      </main>
+        <main>
+          {messagesSnapshot &&
+            messagesSnapshot.map((doc) => (
+              <ChatMessage key={doc.id} message={doc.data()} />
+            ))}
+          <div ref={dummy}></div>
+        </main>
 
-      <form onSubmit={sendMessage}>
-        <input
-          value={formValue}
-          onChange={(e) => setFormValue(e.target.value)}
-          placeholder="Type a message"
-        />
-        <button type="submit" disabled={!formValue}>
-          Send
-        </button>
-      </form>
+        <form
+          className="fixed bottom-0 left-0 w-full bg-white shadow-md p-4 flex justify-center items-center gap-2"
+          onSubmit={sendMessage}
+        >
+          <input
+            className="input input-bordered flex-grow max-w-lg"
+            value={formValue}
+            onChange={(e) => setFormValue(e.target.value)}
+            placeholder="Type a message"
+          />
+          <button
+            className="btn btn-primary"
+            type="submit"
+            disabled={!formValue}
+          >
+            Send
+          </button>
+        </form>
+      </div>
     </>
   );
 }
 
 function ChatMessage(props) {
   const { text, uid, photoURL, createdAt } = props.message;
-  const messageClass = uid === auth.currentUser.uid ? "sent" : "received";
+  const messageClass =
+    uid === auth.currentUser.uid ? "chat chat-end" : "chat chat-start";
 
   return (
     <div className={`message ${messageClass}`}>
-      <img
-        src={
-          photoURL || "https://api.adorable.io/avatars/23/abott@adorable.png"
-        }
-        alt="avatar"
-      />
-      <p>{text}</p>
-      <p>
-        <small>
-          Sent at: {new Date(createdAt?.seconds * 1000).toLocaleString()}
-        </small>
-      </p>
+      <div className="chat-image avatar">
+        <div className="w-10 rounded-full">
+          <img
+            src={
+              photoURL ||
+              "https://api.adorable.io/avatars/23/abott@adorable.png"
+            }
+            alt="avatar"
+          />
+        </div>
+      </div>
+
+      <div className="chat-bubble">{text}</div>
+      <div className="chat-footer opacity-50 text-xs">
+        {new Date(createdAt?.seconds * 1000).toLocaleString()}
+      </div>
     </div>
   );
 }
